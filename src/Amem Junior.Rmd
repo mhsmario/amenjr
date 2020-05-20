@@ -1,0 +1,122 @@
+---
+title: "Amem Junior Lyrics: A brief word analysis."
+author: "by: Mario Saraiva"
+date: "Feb, 24, 2020"
+output: 
+    prettydoc::html_pretty:
+    theme: architect
+---
+
+##Brief text analysis of Amem Jr (former Salz Band) lyrics. 
+
+29 lyrics (from https://www.letras.mus.br/amen-jr/ and 
+https://www.letras.mus.br/salz-band/) were selected for this project:
+
+```{r echo= F, message=FALSE, warning=FALSE}
+library("tm")
+library("SnowballC")
+library("wordcloud")
+library("RColorBrewer")
+library("prettydoc")
+```
+
+
+```{r echo= F, message=FALSE, warning=FALSE}
+library(tm)
+corpus.raw <- Corpus(DirSource("/Users/mariosaraiva/Documents/Amem Jr/"))
+
+list.files("/Users/mariosaraiva/Documents/Amem Jr/")
+#print(list(DirSource("/Users/mariosaraiva/Documents/Amem Jr/")))
+#corpus.raw
+```
+
+
+
+```{r echo= F, message=FALSE, warning=FALSE}
+corpus <- tm_map(corpus.raw, content_transformer(tolower))
+corpus <- tm_map(corpus, stripWhitespace) 
+corpus <- tm_map(corpus, removePunctuation)
+corpus <- tm_map(corpus, removeNumbers)
+corpus <- tm_map(corpus, removeWords, stopwords("portuguese"))
+# Remove your own stop word
+# specify your stopwords as a character vector
+corpus <- tm_map(corpus, removeWords, c("pra")) 
+corpus <- tm_map(corpus, stemDocument)
+```
+
+```{r echo= F, message=FALSE, warning=FALSE}
+dtm <- DocumentTermMatrix(corpus) # sparse form
+#is.list(dtm)
+dtm.mat <- as.matrix(dtm)         # dense form using plain matrices
+library(Matrix)                   # sparse form using the Matrix package
+dtm.Mat <- sparseMatrix(dtm$i, dtm$j, x = dtm$v, 
+                        dims = c(dtm$nrow, dtm$ncol), 
+                        dimnames = dtm$dimnames)
+```
+
+
+```{r echo= F, message=FALSE, warning=FALSE}
+#Or we could focus on terms that appear at least $1000$ times with
+#findFreqTerms(dtm, lowfreq = 40)
+```
+
+```{r echo= F, message=FALSE, warning=FALSE}
+dtm <- TermDocumentMatrix(corpus)
+m <- as.matrix(dtm)
+v <- sort(rowSums(m),decreasing=TRUE)
+d <- data.frame(word = names(v),freq = v)
+
+```
+
+###Top 20 most frequent words found in the lyrics.
+```{r echo= F, message=FALSE, warning=FALSE}
+topwords <- head(d, 20)
+
+print(topwords)
+```
+
+###Wordcloud of the top 20 words.
+```{r echo= F, message=FALSE, warning=FALSE}
+set.seed(1234)
+wordcloud(words = d$word, freq = d$freq, min.freq = 1,
+          max.words = 20, random.order = FALSE, rot.per = 0.35, 
+          colors = brewer.pal(8, "Dark2"))
+```
+
+###Wordcloud of *all* words.
+A quick glance at all the words that appear at least once. 
+The words with highest frequency are highlighted in the wordcloud. <p>
+
+```{r echo= F, message=FALSE, warning=FALSE}
+set.seed(1234)
+wordcloud(words = d$word, freq = d$freq, min.freq = 1,
+          max.words = 400, random.order = FALSE, rot.per = 0.35, 
+          colors = brewer.pal(12, "Paired"))
+```
+
+
+###Associations between words
+We can go a bit deeper into the analysis and look into the association between most frequent words. 
+In other words, we are looking at how likely a given word is associated (or closely used with)
+another word. 
+
+
+```{r echo= F, message=FALSE, warning=FALSE}
+findAssocs(dtm, "mim", corlimit = 0.5)
+
+findAssocs(dtm, "ser", corlimit = 0.5)
+
+findAssocs(dtm, "tudo", corlimit = 0.5)
+
+findAssocs(dtm, "amor", corlimit = 0.5)
+
+findAssocs(dtm, "vida", corlimit = 0.5)
+```
+
+Lastly, we see how the words (that appear at least 10 times) relate to each 
+other (with a correlation of at least 0.5).
+
+```{r echo= F, message=FALSE, warning=FALSE}
+plot(dtm, terms = findFreqTerms(dtm, lowfreq = 10), 
+     corThreshold = 0.5)
+```
